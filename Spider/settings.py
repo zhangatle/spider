@@ -103,6 +103,3 @@ MYSQL_PASSWORD = "Itzler.666"
 SQL_DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
 SQL_DATE_FORMAT = "%Y-%m-%d"
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-os.path.join(BASE_DIR, 'Spider')
-

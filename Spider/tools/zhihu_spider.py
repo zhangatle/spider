@@ -1,10 +1,11 @@
+import os
 import time
 import hmac
 import base64
 import execjs
 import hashlib
 import requests
-from utils.utils import *
+from Spider.utils.utils import *
 from urllib.parse import urlencode
 
 '''js code'''

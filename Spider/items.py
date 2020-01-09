@@ -7,8 +7,8 @@
 import datetime
 
 import scrapy
-from utils.common import extract_num
-from settings import SQL_DATETIME_FORMAT, SQL_DATE_FORMAT
+from Spider.utils.common import extract_num
+from Spider.settings import SQL_DATETIME_FORMAT, SQL_DATE_FORMAT
 
 
 class QuestionItem(scrapy.Item):

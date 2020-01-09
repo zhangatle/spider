@@ -12,7 +12,6 @@ import os
 from scrapy.pipelines.images import ImagesPipeline
 from twisted.enterprise import adbapi
 from pymysql import cursors
-from bloom_filter import BloomFilter
 
 
 class QuestionPipeline(object):
@@ -45,8 +44,6 @@ class JsonWithEncodingPipeline(object):
 class MysqlTwistedPipeline(object):
     def __init__(self, dbpool):
         self.dbpool = dbpool
-        bloom = BloomFilter(max_elements=10000, error_rate=0.1)
-        self.bloom = bloom
 
     @classmethod
     def from_settings(cls, settings):
