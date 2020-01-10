@@ -5,7 +5,7 @@ import base64
 import execjs
 import hashlib
 import requests
-from Spider.utils.utils import *
+from utils.utils import *
 from urllib.parse import urlencode
 
 '''js code'''

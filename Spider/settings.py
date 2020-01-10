@@ -9,12 +9,12 @@
 #     https://docs.scrapy.org/en/latest/topics/downloader-middleware.html
 #     https://docs.scrapy.org/en/latest/topics/spider-middleware.html
 import os
+import sys
 
 BOT_NAME = 'Spider'
 
 SPIDER_MODULES = ['Spider.spiders']
 NEWSPIDER_MODULE = 'Spider.spiders'
-
 
 # Crawl responsibly by identifying yourself (and your website) on the user-agent
 USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.88 Safari/537.36'
@@ -102,4 +102,6 @@ MYSQL_PASSWORD = "Itzler.666"
 
 SQL_DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
 SQL_DATE_FORMAT = "%Y-%m-%d"
+
+sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 

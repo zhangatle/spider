@@ -3,9 +3,9 @@ import re
 from urllib import parse
 
 import scrapy
-from Spider.items import QuestionItem
+from items import QuestionItem
 from Spider.pipelines import QuestionPipeline
-from Spider.utils.common import get_md5
+from utils.common import get_md5
 import datetime
 
 

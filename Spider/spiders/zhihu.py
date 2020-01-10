@@ -10,13 +10,13 @@ import time
 from urllib import parse
 from urllib.parse import urlencode
 from scrapy.loader import ItemLoader
-from Spider.items import ZhihuQuestionItem, ZhihuAnswerItem
+from items import ZhihuQuestionItem, ZhihuAnswerItem
 
 import execjs
 import scrapy
 from scrapy.http.cookies import CookieJar
 
-from Spider.utils.utils import saveImage, showImage, removeImage
+from utils.utils import saveImage, showImage, removeImage
 
 
 class ZhihuSpider(scrapy.Spider):
