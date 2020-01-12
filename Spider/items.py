@@ -14,6 +14,26 @@ from w3lib.html import remove_tags
 from utils.common import extract_num
 from settings import SQL_DATETIME_FORMAT, SQL_DATE_FORMAT
 
+from elasticsearch_dsl.connections import connections
+
+from models.es_types import Lagou
+es = connections.create_connection(Lagou)
+
+
+def gen_suggests(index, info_tuple):
+    used_words = set()
+    suggests = []
+    for text, weight in info_tuple:
+        if text:
+            words = es.indices.analyze(index=index, body={"analyzer": "ik_max_word", "text": "{0}".format(text)})
+            analyzed_words = set([r["token"] for r in words["tokens"] if len(r["token"])>1])
+            new_words = analyzed_words - used_words
+        else:
+            new_words = set()
+        if new_words:
+            suggests.append({'input': list(new_words), 'weight': weight})
+    return suggests
+
 
 class QuestionItem(scrapy.Item):
     # define the fields for your item here like:
@@ -106,12 +126,19 @@ def handle_jobaddr(value):
     return "".join(addr_list)
 
 
+def format_tags(value):
+    return "".join(value)
+
+
 class LagouJobItemLoader(ItemLoader):
     default_output_processor = TakeFirst()
 
 
 class LagouJobItem(scrapy.Item):
     title = scrapy.Field()
+    tags = scrapy.Field(
+        input_processor=MapCompose(format_tags)
+    )
     url = scrapy.Field()
     url_object_id = scrapy.Field()
     salary = scrapy.Field()
@@ -142,17 +169,45 @@ class LagouJobItem(scrapy.Item):
 
     def get_insert_sql(self):
         insert_sql = """
-            insert into lagou_jobs(title, url, url_object_id, salary, job_city, work_years, degree_need, job_type, publish_time, job_advantage, job_desc, job_address, company_url, company_name, id, crawl_time, crawl_update_time)
-            values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            insert into lagou_jobs(title, url, url_object_id, salary, job_city, work_years, degree_need, job_type, publish_time, job_advantage, job_desc, job_address, company_url, company_name, id, crawl_time, crawl_update_time, tags)
+            values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             on duplicate key update job_desc=values(job_desc)
         """
 
         id = extract_num(self["url"])
         params = (self['title'], self['url'], self['url_object_id'], self['salary'], self['job_city'], self['work_years'], self['degree_need'],
                   self['job_type'], self['publish_time'], self['job_advantage'], self['job_desc'], self['job_address'], self['company_url'],
-                  self['company_name'], id, self['crawl_time'], self['crawl_update_time'])
+                  self['company_name'], id, self['crawl_time'], self['crawl_update_time'], self['tags'])
 
         return insert_sql, params
+
+    def save_to_es(self):
+        lagou = Lagou()
+        lagou.title = self['title']
+        lagou.url = self['url']
+        lagou.url_object_id = self['url_object_id']
+        lagou.salary = self['salary']
+        lagou.job_city = self['job_city']
+        lagou.work_years = self['work_years']
+        lagou.degree_need = self['degree_need']
+        lagou.job_type = self['job_type']
+        lagou.publish_time = self['publish_time']
+        lagou.job_advantage = self['job_advantage']
+        lagou.job_desc = self['job_desc']
+        lagou.job_address = self['job_address']
+        lagou.company_url = self['company_url']
+        lagou.company_name = self['company_name']
+        lagou.id = extract_num(self["url"])
+        lagou.crawl_time = self['crawl_time']
+        lagou.crawl_update_time = self['crawl_update_time']
+        lagou.tags = self['tags']
+
+        lagou.suggest = gen_suggests(Lagou._index._name, ((lagou.title, 10), (lagou.tags, 7)))
+
+        lagou.save()
+
+        return
+
 
 
 

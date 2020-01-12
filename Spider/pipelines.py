@@ -78,3 +78,10 @@ class MysqlTwistedPipeline(object):
 
     def close_spider(self, spider):
         pass
+
+
+# 将数据保存在es中
+class ElasticsearchPipeline(object):
+    def process_item(self, item, spider):
+        item.save_to_es()
+        return item

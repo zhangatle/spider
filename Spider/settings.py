@@ -67,6 +67,7 @@ COOKIES_ENABLED = True
 # See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
 ITEM_PIPELINES = {
    'Spider.pipelines.MysqlTwistedPipeline': 2,
+   'Spider.pipelines.ElasticsearchPipeline': 3,
 }
 
 IMAGES_URLS_FIELD = "avatar"
