@@ -66,7 +66,7 @@ COOKIES_ENABLED = True
 # Configure item pipelines
 # See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
 ITEM_PIPELINES = {
-   'Spider.pipelines.MysqlTwistedPipeline': 2,
+   # 'Spider.pipelines.MysqlTwistedPipeline': 2,
    'Spider.pipelines.ElasticsearchPipeline': 3,
 }
 
@@ -95,7 +95,7 @@ IMAGES_STORE = os.path.join(project_path, 'images')
 #HTTPCACHE_IGNORE_HTTP_CODES = []
 #HTTPCACHE_STORAGE = 'scrapy.extensions.httpcache.FilesystemCacheStorage'
 
-MYSQL_HOST = "localhost"
+MYSQL_HOST = "192.168.10.99"
 MYSQL_USER = "root"
 MYSQL_DBNAME = "segmentfault"
 MYSQL_PASSWORD = "Itzler.666"

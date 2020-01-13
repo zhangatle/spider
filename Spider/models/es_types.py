@@ -1,6 +1,6 @@
 from elasticsearch_dsl import Document, Date, Integer, Keyword, Text, connections, Completion
 
-es = connections.create_connection(hosts=["localhost"])  # connection可以连接多台服务器
+es = connections.create_connection(hosts=["192.168.10.88"])  # connection可以连接多台服务器
 
 
 class Lagou(Document):
@@ -19,7 +19,6 @@ class Lagou(Document):
     job_address = Text(analyzer='ik_max_word')
     company_url = Keyword()
     company_name = Text(analyzer='ik_max_word')
-    id = Integer()
     crawl_time = Date()
     crawl_update_time = Date()
     tags = Text(analyzer='ik_max_word')

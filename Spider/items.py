@@ -8,7 +8,7 @@ import datetime
 
 import scrapy
 from scrapy.loader import ItemLoader
-from scrapy.loader.processors import MapCompose, TakeFirst
+from scrapy.loader.processors import MapCompose, TakeFirst, Join
 from w3lib.html import remove_tags
 
 from utils.common import extract_num
@@ -17,7 +17,7 @@ from settings import SQL_DATETIME_FORMAT, SQL_DATE_FORMAT
 from elasticsearch_dsl.connections import connections
 
 from models.es_types import Lagou
-es = connections.create_connection(Lagou)
+es = connections.create_connection(hosts=["192.168.10.88"])
 
 
 def gen_suggests(index, info_tuple):
@@ -137,7 +137,7 @@ class LagouJobItemLoader(ItemLoader):
 class LagouJobItem(scrapy.Item):
     title = scrapy.Field()
     tags = scrapy.Field(
-        input_processor=MapCompose(format_tags)
+        output_processor=Join(',')
     )
     url = scrapy.Field()
     url_object_id = scrapy.Field()
@@ -182,7 +182,7 @@ class LagouJobItem(scrapy.Item):
         return insert_sql, params
 
     def save_to_es(self):
-        lagou = Lagou()
+        lagou = Lagou(meta={'id': extract_num(self["url"])})
         lagou.title = self['title']
         lagou.url = self['url']
         lagou.url_object_id = self['url_object_id']
@@ -197,7 +197,6 @@ class LagouJobItem(scrapy.Item):
         lagou.job_address = self['job_address']
         lagou.company_url = self['company_url']
         lagou.company_name = self['company_name']
-        lagou.id = extract_num(self["url"])
         lagou.crawl_time = self['crawl_time']
         lagou.crawl_update_time = self['crawl_update_time']
         lagou.tags = self['tags']
