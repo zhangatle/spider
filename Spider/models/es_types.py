@@ -1,7 +1,4 @@
-from datetime import datetime
 from elasticsearch_dsl import Document, Date, Integer, Keyword, Text, connections, Completion
-
-from elasticsearch_dsl.analysis import CustomAnalyzer as _CustomAnalysis
 
 es = connections.create_connection(hosts=["localhost"])  # connection可以连接多台服务器
 
