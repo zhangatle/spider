@@ -63,7 +63,9 @@ class ZhihuQuestionItem(scrapy.Item):
     )
     url = scrapy.Field()
     title = scrapy.Field()
-    content = scrapy.Field()
+    content = scrapy.Field(
+        input_processor=MapCompose(remove_tags)
+    )
     answer_num = scrapy.Field(
         input_processor=MapCompose(extract_num)
     )
@@ -114,7 +116,10 @@ class ZhihuAnswerItem(scrapy.Item):
     url = scrapy.Field()
     question_id = scrapy.Field()
     author_id = scrapy.Field()
-    content = scrapy.Field()
+    author_name = scrapy.Field()
+    content = scrapy.Field(
+        input_processor=MapCompose(remove_tags)
+    )
     approve_num = scrapy.Field()
     comments_num = scrapy.Field()
     create_time = scrapy.Field()
@@ -124,13 +129,13 @@ class ZhihuAnswerItem(scrapy.Item):
     # 获取插入sql
     def get_insert_sql(self):
         insert_sql = """
-            insert into zhihu_answer(id, url, question_id, author_id, content, approve_num, comments_num, create_time, update_time, crawl_time)
-            values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            insert into zhihu_answer(id, url, question_id, author_id, content, approve_num, comments_num, create_time, update_time, crawl_time, author_name)
+            values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             on duplicate key update content=values(content), comments_num=values(comments_num), approve_num=values(approve_num), update_time=values(update_time)
         """
 
         params = (
-            self['id'], self['url'], self['question_id'], self['author_id'], self['content'], self['approve_num'], self['comments_num'], format_datetime(self['create_time']), format_datetime(self['update_time']), format_datetime(self['crawl_time'])
+            self['id'], self['url'], self['question_id'], self['author_id'], self['content'], self['approve_num'], self['comments_num'], format_datetime(self['create_time']), format_datetime(self['update_time']), format_datetime(self['crawl_time']), self['author_name']
         )
         return insert_sql, params
 
@@ -140,6 +145,7 @@ class ZhihuAnswerItem(scrapy.Item):
         zhihu.url = self['url']
         zhihu.question_id = self['question_id']
         zhihu.author_id = self['author_id']
+        zhihu.author_name = self['author_name']
         zhihu.content = self['content']
         zhihu.approve_num = self['approve_num']
         zhihu.comments_num = self['comments_num']

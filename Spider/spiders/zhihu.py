@@ -518,6 +518,7 @@ class ZhihuSpider(scrapy.Spider):
             answer_item['url'] = answer['url']
             answer_item['question_id'] = answer['question']['id']
             answer_item['author_id'] = answer['author']['id'] if 'id' in answer['author'] else None
+            answer_item['author_name'] = answer['author']['name'] if 'name' in answer['author'] else None
             answer_item['content'] = answer['content'] if 'content' in answer else None
             answer_item['approve_num'] = answer['voteup_count']
             answer_item['comments_num'] = answer['comment_count']

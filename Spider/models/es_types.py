@@ -58,6 +58,7 @@ class ZhihuAnswer(Document):
     url = Keyword()
     question_id = Keyword()
     author_id = Keyword()
+    author_name = Text(analyzer='ik_max_word')
     content = Text(analyzer='ik_max_word')
     approve_num = Integer()
     comments_num = Integer()
@@ -73,4 +74,4 @@ class ZhihuAnswer(Document):
         }
 
 if __name__ == "__main__":
-    ZhihuAnswer.init()  # 根据类，直接生成mapping，
+    ZhihuQuestion.init()  # 根据类，直接生成mapping，
