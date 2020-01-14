@@ -9,13 +9,13 @@ import re
 import time
 from urllib import parse
 from urllib.parse import urlencode
-from scrapy.loader import ItemLoader
-from items import ZhihuQuestionItem, ZhihuAnswerItem
+from items import ZhihuQuestionItem, ZhihuAnswerItem, ZhihuQuestionItemLoader
 
 import execjs
 import scrapy
 from scrapy.http.cookies import CookieJar
 
+from settings import SQL_DATETIME_FORMAT
 from utils.utils import saveImage, showImage, removeImage
 
 
@@ -486,11 +486,12 @@ class ZhihuSpider(scrapy.Spider):
             else:
                 yield scrapy.Request(url, headers=self.headers, meta={'cookiejar': response.meta['cookiejar']}, callback=self.parse)
 
+    # 解析知乎提问
     def parse_question(self, response):
         match_obj = re.match("(.*zhihu.com/question/(\d+))(/|$).*", response.url)
         if match_obj:
             question_id = int(match_obj.group(2))
-            item_loader = ItemLoader(item=ZhihuQuestionItem(), response=response)
+            item_loader = ZhihuQuestionItemLoader(item=ZhihuQuestionItem(), response=response)
             item_loader.add_css("title", "h1.QuestionHeader-title::text")
             item_loader.add_css("content", ".QuestionHeader-detail")
             item_loader.add_value('url', response.url)
@@ -498,11 +499,14 @@ class ZhihuSpider(scrapy.Spider):
             item_loader.add_css('answer_num', ".List-headerText span::text")
             item_loader.add_css('comments_num', ".QuestionHeader-Comment button::text")
             item_loader.add_css('follow_num', ".NumberBoard-itemValue::text")
+            item_loader.add_css('view_num', ".NumberBoard-itemValue:nth-child(2)::text")
             item_loader.add_css('topics', ".QuestionHeader-topics .Popover div::text")
+            item_loader.add_value('crawl_time', datetime.datetime.now().strftime(SQL_DATETIME_FORMAT))
             question_item = item_loader.load_item()
             yield scrapy.Request(self.start_answer_url.format(question_id, 20, 0), meta={'cookiejar': response.meta['cookiejar']}, headers=self.headers, callback=self.parse_answer)
             yield question_item
 
+    # 解析知乎回答
     def parse_answer(self, response):
         answer_json = json.loads(response.text)
         is_end = answer_json['paging']['is_end']
@@ -519,7 +523,7 @@ class ZhihuSpider(scrapy.Spider):
             answer_item['comments_num'] = answer['comment_count']
             answer_item['create_time'] = answer['created_time']
             answer_item['update_time'] = answer['updated_time']
-            answer_item['crawl_time'] = datetime.datetime.now()
+            answer_item['crawl_time'] = int(time.time())
             yield answer_item
 
         if not is_end:
@@ -549,6 +553,7 @@ class ZhihuSpider(scrapy.Spider):
         return [scrapy.FormRequest(self.captcha_url, meta={'cookiejar': response.meta['cookiejar']}, headers=self.headers, formdata={'input_text': self.captcha},
                                callback=self.check_captcha)]
 
+    # 验证码校验
     def check_captcha(self, response):
         # 获取signature
         signature = hmac.new(b'd1b964811afb40118a12068ff74a12f4', digestmod=hashlib.sha1)
@@ -562,8 +567,8 @@ class ZhihuSpider(scrapy.Spider):
             'client_id': client_id,
             'grant_type': grant_type,
             'source': source,
-            'username': '',
-            'password': '',
+            'username': '16608006657',
+            'password': '520*ihtxgq@ZH',
             'lang': 'en',
             'ref_source': 'homepage',
             'utm_source': '',
@@ -579,6 +584,7 @@ class ZhihuSpider(scrapy.Spider):
                                    method='POST', body=data,
                                    callback=self.check_login)]
 
+    # 登录检验
     def check_login(self, response):
         res = response.body.decode("utf-8")
         if 'user_id' in res:

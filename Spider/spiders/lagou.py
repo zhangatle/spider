@@ -8,6 +8,7 @@ from items import LagouJobItemLoader, LagouJobItem
 from utils.common import get_md5
 
 
+# 拉勾职位信息爬虫
 class LagouSpider(CrawlSpider):
     name = 'lagou'
     allowed_domains = ['www.lagou.com']
@@ -15,7 +16,7 @@ class LagouSpider(CrawlSpider):
 
     custom_settings = {
         "COOKIES_ENABLED": False,
-        "DOWNLOAD_DELAY": 5,
+        "DOWNLOAD_DELAY": 18,
         'DEFAULT_REQUEST_HEADERS': {
             'Accept': 'application/json, text/javascript, */*; q=0.01',
             'Accept-Encoding': 'gzip, deflate, br',
@@ -30,11 +31,12 @@ class LagouSpider(CrawlSpider):
     }
 
     rules = (
-        # Rule(LinkExtractor(allow=(r'zhaopin/.*',),)),
-        # Rule(LinkExtractor(allow=(r'gongsi/.*',),)),
+        Rule(LinkExtractor(allow=(r'zhaopin/.*',),)),
+        Rule(LinkExtractor(allow=(r'gongsi/.*',),)),
         Rule(LinkExtractor(allow=(r'jobs/\d+.html',),), callback='parse_job', follow=True),
     )
 
+    # 解析职位信息
     def parse_job(self, response):
         item_loader = LagouJobItemLoader(item=LagouJobItem(), response=response)
         item_loader.add_css("title", ".job-name::attr(title)")

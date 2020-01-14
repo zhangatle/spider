@@ -4,9 +4,7 @@ from urllib import parse
 
 import scrapy
 from items import QuestionItem
-from Spider.pipelines import QuestionPipeline
 from utils.common import get_md5
-import datetime
 
 
 class SegmentfaultSpider(scrapy.Spider):

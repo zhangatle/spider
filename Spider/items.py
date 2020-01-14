@@ -5,6 +5,7 @@
 # See documentation in:
 # https://docs.scrapy.org/en/latest/topics/items.html
 import datetime
+import re
 
 import scrapy
 from scrapy.loader import ItemLoader
@@ -16,10 +17,11 @@ from settings import SQL_DATETIME_FORMAT, SQL_DATE_FORMAT
 
 from elasticsearch_dsl.connections import connections
 
-from models.es_types import Lagou
-es = connections.create_connection(hosts=["192.168.10.88"])
+from models.es_types import Lagou, ZhihuQuestion, ZhihuAnswer
+es = connections.create_connection(hosts=["localhost"])
 
 
+# 获取搜索建议
 def gen_suggests(index, info_tuple):
     used_words = set()
     suggests = []
@@ -36,11 +38,11 @@ def gen_suggests(index, info_tuple):
 
 
 class QuestionItem(scrapy.Item):
-    # define the fields for your item here like:
-    # name = scrapy.Field()
     title = scrapy.Field()
     content = scrapy.Field()
-    tags = scrapy.Field()
+    topics = scrapy.Field(
+        output_processor=Join(',')
+    )
     read_num = scrapy.Field()
     avatar = scrapy.Field()
     avatar_path = scrapy.Field()
@@ -48,42 +50,65 @@ class QuestionItem(scrapy.Item):
     url_object_id = scrapy.Field()
 
 
+# 知乎提问的itemloader
+class ZhihuQuestionItemLoader(ItemLoader):
+    default_output_processor = TakeFirst()
+
+
+# 知乎提问item
 class ZhihuQuestionItem(scrapy.Item):
     id = scrapy.Field()
-    topics = scrapy.Field()
+    topics = scrapy.Field(
+        output_processor=Join(',')
+    )
     url = scrapy.Field()
     title = scrapy.Field()
     content = scrapy.Field()
-    answer_num = scrapy.Field()
-    comments_num = scrapy.Field()
-    follow_num = scrapy.Field()
-    view_num = scrapy.Field()
+    answer_num = scrapy.Field(
+        input_processor=MapCompose(extract_num)
+    )
+    comments_num = scrapy.Field(
+        input_processor=MapCompose(extract_num)
+    )
+    follow_num = scrapy.Field(
+        input_processor=MapCompose(extract_num)
+    )
+    view_num = scrapy.Field(
+        input_processor=MapCompose(extract_num)
+    )
     crawl_time = scrapy.Field()
 
+    # 获取插入的sql
     def get_insert_sql(self):
         insert_sql = """
             insert into zhihu_question(id, topics, url, title, content, answer_num, comments_num, follow_num, view_num, crawl_time) values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             on duplicate key update content=values(content), answer_num=values(answer_num), comments_num=values(comments_num), follow_num=values(follow_num), view_num=values(view_num)
         """
-        id = self['id'][0]
-        topics = ",".join(self['topics'])
-        url = self['url'][0]
-        title = "".join(self['title'])
-        content = "".join(self['content'])
-        answer_num = extract_num("".join(self["answer_num"]))
-        comments_num = extract_num("".join(self["comments_num"]))
-        if len(self['follow_num']) == 2:
-            follow_num = int(self['follow_num'][0].replace(",", ""))
-            view_num = int(self['follow_num'][1].replace(",", ""))
-        else:
-            follow_num = int(self['follow_num'][0].replace(",", ""))
-            view_num = 0
-        crawl_time = datetime.datetime.now().strftime(SQL_DATETIME_FORMAT)
-
-        params = (id, topics, url, title, content, answer_num, comments_num, follow_num, view_num, crawl_time)
+        params = (self['id'], self['topics'], self['url'], self['title'], self['content'], self['answer_num'], self['comments_num'], self['follow_num'], self['view_num'], self['crawl_time'])
         return insert_sql, params
 
+    # 保存到elasticsearch
+    def save_to_es(self):
+        zhihu = ZhihuQuestion(meta={'id': self['id']})
+        zhihu.topics = self['topics']
+        zhihu.url = self['url']
+        zhihu.title = self['title']
+        zhihu.content = self['content']
+        zhihu.answer_num = self['answer_num']
+        zhihu.comments_num = self['comments_num']
+        zhihu.follow_num = self['follow_num']
+        zhihu.view_num = self['view_num']
+        zhihu.crawl_time = self['crawl_time']
+        zhihu.suggest = gen_suggests(ZhihuQuestion._index._name, ((zhihu.title, 10), (zhihu.content, 7)))
+        zhihu.save()
+        return
 
+
+def format_datetime(value):
+    return datetime.datetime.fromtimestamp(value).strftime(SQL_DATETIME_FORMAT)
+
+
+# 知乎回答的Item
 class ZhihuAnswerItem(scrapy.Item):
     id = scrapy.Field()
     url = scrapy.Field()
@@ -96,22 +121,37 @@ class ZhihuAnswerItem(scrapy.Item):
     update_time = scrapy.Field()
     crawl_time = scrapy.Field()
 
+    # 获取插入sql
     def get_insert_sql(self):
         insert_sql = """
             insert into zhihu_answer(id, url, question_id, author_id, content, approve_num, comments_num, create_time, update_time, crawl_time)
             values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             on duplicate key update content=values(content), comments_num=values(comments_num), approve_num=values(approve_num), update_time=values(update_time)
         """
-        create_time = datetime.datetime.fromtimestamp(self["create_time"]).strftime(SQL_DATETIME_FORMAT)
-        update_time = datetime.datetime.fromtimestamp(self["update_time"]).strftime(SQL_DATETIME_FORMAT)
 
         params = (
-            self['id'], self['url'], self['question_id'], self['author_id'], self['content'], self['approve_num'], self['comments_num'], create_time, update_time, self['crawl_time'].strftime(SQL_DATETIME_FORMAT)
+            self['id'], self['url'], self['question_id'], self['author_id'], self['content'], self['approve_num'], self['comments_num'], format_datetime(self['create_time']), format_datetime(self['update_time']), format_datetime(self['crawl_time'])
         )
-
         return insert_sql, params
 
+    # 保存数据到elasticsearch
+    def save_to_es(self):
+        zhihu = ZhihuAnswer(meta={'id': self['id']})
+        zhihu.url = self['url']
+        zhihu.question_id = self['question_id']
+        zhihu.author_id = self['author_id']
+        zhihu.content = self['content']
+        zhihu.approve_num = self['approve_num']
+        zhihu.comments_num = self['comments_num']
+        zhihu.create_time = format_datetime(self['create_time'])
+        zhihu.update_time = format_datetime(self['update_time'])
+        zhihu.crawl_time = format_datetime(self['crawl_time'])
+        zhihu.suggest = gen_suggests(ZhihuAnswer._index._name, ((zhihu.content, 7),))
+        zhihu.save()
+        return
 
+
+# 替换"/"
 def replace_splash(value):
     return value.replace("/", "")
 
@@ -119,21 +159,19 @@ def replace_splash(value):
 def handle_strip(value):
     return value.strip()
 
-
+# 处理地址信息
 def handle_jobaddr(value):
     addr_list = value.split("\n")
     addr_list = [item.strip() for item in addr_list if item.strip() != "查看地图"]
     return "".join(addr_list)
 
 
-def format_tags(value):
-    return "".join(value)
-
-
+# 拉勾职位信息的itemloader
 class LagouJobItemLoader(ItemLoader):
     default_output_processor = TakeFirst()
 
 
+# 拉勾item
 class LagouJobItem(scrapy.Item):
     title = scrapy.Field()
     tags = scrapy.Field(
@@ -167,6 +205,7 @@ class LagouJobItem(scrapy.Item):
     crawl_time = scrapy.Field()
     crawl_update_time = scrapy.Field()
 
+    # 获取插入sql
     def get_insert_sql(self):
         insert_sql = """
             insert into lagou_jobs(title, url, url_object_id, salary, job_city, work_years, degree_need, job_type, publish_time, job_advantage, job_desc, job_address, company_url, company_name, id, crawl_time, crawl_update_time, tags)
@@ -181,6 +220,7 @@ class LagouJobItem(scrapy.Item):
 
         return insert_sql, params
 
+    # 保存到elasticsearch
     def save_to_es(self):
         lagou = Lagou(meta={'id': extract_num(self["url"])})
         lagou.title = self['title']
@@ -200,12 +240,10 @@ class LagouJobItem(scrapy.Item):
         lagou.crawl_time = self['crawl_time']
         lagou.crawl_update_time = self['crawl_update_time']
         lagou.tags = self['tags']
-
-        lagou.suggest = gen_suggests(Lagou._index._name, ((lagou.title, 10), (lagou.tags, 7)))
-
+        lagou.suggest = gen_suggests(Lagou._index._name, ((lagou.title, 10), (lagou.job_desc, 7)))
         lagou.save()
-
         return
+
 
 
 

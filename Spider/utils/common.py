@@ -2,6 +2,7 @@ import hashlib
 import re
 
 
+# 将url转换为md5
 def get_md5(url):
     if isinstance(url, str):
         url = url.encode("utf-8")
@@ -10,6 +11,7 @@ def get_md5(url):
     return m.hexdigest()
 
 
+# 解析数字
 def extract_num(text):
     match_re = re.match(".*?(\d+).*", text)
     if match_re:

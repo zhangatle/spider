@@ -1,8 +1,8 @@
 from elasticsearch_dsl import Document, Date, Integer, Keyword, Text, connections, Completion
 
-es = connections.create_connection(hosts=["192.168.10.88"])  # connection可以连接多台服务器
+es = connections.create_connection(hosts=["localhost"])  # connection可以连接多台服务器
 
-
+# 拉勾职位的elasticsearch的index索引定义
 class Lagou(Document):
     suggest = Completion(analyzer='ik_max_word')
     title = Text(analyzer='ik_max_word')
@@ -31,5 +31,46 @@ class Lagou(Document):
         }
 
 
+# 知乎提问的elasticsearch的index索引定义
+class ZhihuQuestion(Document):
+    suggest = Completion(analyzer='ik_max_word')
+    title = Text(analyzer='ik_max_word')
+    url = Keyword()
+    content = Text(analyzer='ik_max_word')
+    topics = Text(analyzer='ik_max_word')
+    crawl_time = Date()
+    answer_num = Integer()
+    comments_num = Integer()
+    follow_num = Integer()
+    view_num = Integer()
+
+    class Index:
+        name = 'zhihu_question'
+        settings = {
+          "number_of_shards": 2,
+          "number_of_replicas": 0
+        }
+
+
+# 知乎回答的elasticsearch的index索引定义
+class ZhihuAnswer(Document):
+    suggest = Completion(analyzer='ik_max_word')
+    url = Keyword()
+    question_id = Keyword()
+    author_id = Keyword()
+    content = Text(analyzer='ik_max_word')
+    approve_num = Integer()
+    comments_num = Integer()
+    create_time = Date()
+    update_time = Date()
+    crawl_time = Date()
+
+    class Index:
+        name = 'zhihu_answer'
+        settings = {
+          "number_of_shards": 2,
+          "number_of_replicas": 0
+        }
+
 if __name__ == "__main__":
-    Lagou.init()  # 根据类，直接生成mapping，
+    ZhihuAnswer.init()  # 根据类，直接生成mapping，
